@@ -1,0 +1,111 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider  = "prisma-client-js"
+}
+
+model Store {
+  id                   String             @id @default(uuid())
+  name                 String
+  slug                 String             @unique
+  hours                BusinessHours[]
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  atvrId               String             @unique
+  inventory            ProductInventory[]
+  inventorySyncEnabled Boolean            @default(false)
+}
+
+model BusinessHours {
+  id          String   @id @default(uuid())
+  weekday     Int
+  opensAt     Int
+  closesAt    Int
+  store       Store    @relation(fields: [storeId], references: [id])
+  storeId     String
+  atvrStoreId String
+  updatedAt   DateTime @updatedAt
+
+  @@unique([atvrStoreId, weekday])
+}
+
+model Product {
+  id                String             @id @default(uuid())
+  name              String
+  manufacturer      Manufacturer       @relation(fields: [manufacturerId], references: [id])
+  containerType     ContainerType      @default(OTHER)
+  volume            Int
+  alcohol           Float
+  category          ProductCategory    @relation(fields: [productCategoryId], references: [id])
+  tasteProfile      TasteProfile       @relation(fields: [tasteProfileId], references: [id])
+  placeOfOrigin     String
+  isTempProduct     Boolean            @default(false)
+  inventory         ProductInventory[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  atvrId            String             @unique
+  productCategoryId String
+  tasteProfileId    String
+  manufacturerId    String
+  image             String?
+  description       String?
+}
+
+model ProductInventory {
+  id        String   @id @default(uuid())
+  product   Product  @relation(fields: [productId], references: [id])
+  store     Store    @relation(fields: [storeId], references: [id])
+  price     Float    @default(0.0)
+  quantity  Int
+  available         Boolean            @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  latest    Boolean  @default(false)
+  productId String
+  storeId   String
+  atvrProductId String?
+}
+
+model ProductCategory {
+  id            String         @id @default(uuid())
+  name          String         @unique
+  description   String
+  tasteProfiles TasteProfile[]
+  atvrId        String         @unique
+  Product       Product[]
+}
+
+model TasteProfile {
+  id                String           @id @default(uuid())
+  name              String           @unique
+  description       String
+  productCategory   ProductCategory? @relation(fields: [productCategoryId], references: [id])
+  productCategoryId String?
+  atvrId            String           @unique
+  Product           Product[]
+}
+
+model Manufacturer {
+  id       String    @id @default(uuid())
+  name     String    @unique
+  products Product[]
+
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+}
+
+enum ContainerType {
+  CAN
+  BOTTLE
+  KEG
+  BOX
+  GIFTBOX
+  OTHER
+}

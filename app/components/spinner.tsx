@@ -1,0 +1,7 @@
+export function Spinner() {
+	return (
+		<div className="inline-block animate-spin">
+			<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAABmJLR0QA/wD/AP+gvaeTAAABaElEQVRoge3Zv0vDQBTA8a8/lo6uxaCg0MnB0QYc7KK4OOtfIoKLrhYcHATBWSk4O7j4P7ipIIIgRLFd3IxDrir5cSbnnRflfeBBSe7evVdyJG1ACOFLAPSAgYozoOW1IgMB8ATEqXhW5/6MHtkmhnHqsa7KBhQ30nex4KiLpN+IXSR11ciF5ty5ozVLGwc2gVsgAg6ARsHYFsnGTl9WETCpWWMW2AeOgVUrVefYyilsTzM+INnYfRUn6JuYUeO+5t/4cdU5rsg28mAx/05O/suyk6vskZGSx0y9WsyltUv2G+tazN8EXlL51y3m/9Ag2eARcA1sU7zZTc0DR8AhsGg5txBCiN/XAVawewc3EQJt08kdPu+wy7YqMhACbyoKm9E9azn5AWQgLvhcyRL1uLTawILnGoQQQoj6GzOYEwITwKPlWobWgCngpsokk/9+p9VCrtwB9w7zC1E3cyqc8vHGSgghxP/xDpO8W4i5zYi6AAAAAElFTkSuQmCC" />
+		</div>
+	);
+}

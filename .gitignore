@@ -1,0 +1,10 @@
+node_modules
+
+/.cache
+/build
+/public/build
+
+env-config.js
+
+.env-base
+.env*

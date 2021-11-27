@@ -1,0 +1,52 @@
+[
+  {
+    "id": "60DL",
+    "slug": "other_lagers",
+    "description": "Other Lagers"
+  },
+  {
+    "id": "61SP",
+    "slug": "stout_and_porter",
+    "description": "Stout and Porter"
+  },
+  {
+    "id": "62ÁK",
+    "slug": "fruit_and_spice_beer",
+    "description": "Fruit and Spice Beer"
+  },
+  {
+    "id": "61BE",
+    "slug": "belgian_ale",
+    "description": "Belgian Ale"
+  },
+  {
+    "id": "62SUR",
+    "slug": "sour_beer",
+    "description": "Sour Beer"
+  },
+  {
+    "id": "61IP",
+    "slug": "ipa",
+    "description": "IPA"
+  },
+  {
+    "id": "61DE",
+    "slug": "german_ale",
+    "description": "German Ale"
+  },
+  {
+    "id": "60LL",
+    "slug": "pale_lagers",
+    "description": "Pale Lagers"
+  },
+  {
+    "id": "62HV",
+    "slug": "wheat_beers",
+    "description": "Wheat Beers"
+  },
+  {
+    "id": "61ÖL",
+    "slug": "american_and_british_ale",
+    "description": "American and British Ale"
+  }
+]
