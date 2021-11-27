@@ -8,3 +8,6 @@ env-config.js
 
 .env-base
 .env*
+.vercel
+
+app/styles/app.css
