@@ -12,6 +12,19 @@ export function Sidebar({ stores }: SidebarProps) {
 	return (
 		<aside className="overflow-y-auto max-h-screen py-4 pr-2 md:pr-0">
 			<ul>
+				<li>
+					<Link
+						prefetch="intent"
+						to="/"
+						className={clsx('block p-3 md:p-4 md:pr-12 hover:bg-gray-200', {
+							'bg-green-200 hover:bg-green-100': !params.atvrId,
+						})}
+					>
+						<p className="hidden md:block">Newest products</p>
+						<strong className="text-right text-gray-500">Home</strong>
+					</Link>
+				</li>
+
 				{stores.map((store) => (
 					<li key={store.atvrId}>
 						<Link

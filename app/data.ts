@@ -1,3 +1,4 @@
+import { subDays } from 'date-fns';
 import invariant from 'tiny-invariant';
 import { db } from '~/utils/db.server';
 
@@ -159,3 +160,70 @@ export async function getStoreInventory(
 }
 export type StoreInventory = AwaitedReturnType<typeof getStoreInventory>;
 export type StoreInventoryItem = StoreInventory['store']['inventory'][number];
+
+interface GetNewProductsOptions {
+	take?: number;
+	skip?: number;
+}
+
+export async function getNewProducts({
+	take = 40,
+	skip = 0,
+}: GetNewProductsOptions = {}) {
+	const totalItems = await db.product.count({
+		where: {
+			createdAt: {
+				gte: subDays(new Date(), 14),
+			},
+		},
+	});
+	const products = await db.product.findMany({
+		take,
+		skip,
+		orderBy: {
+			createdAt: 'desc',
+		},
+		where: {
+			createdAt: {
+				gte: subDays(new Date(), 14),
+			},
+		},
+		include: {
+			tasteProfile: {
+				select: {
+					id: true,
+					atvrId: true,
+					name: true,
+				},
+			},
+			manufacturer: {
+				select: { name: true },
+			},
+			inventory: {
+				where: {
+					quantity: { gt: 0 },
+					latest: { equals: true },
+				},
+				orderBy: {
+					store: { atvrId: 'asc' },
+				},
+				select: {
+					store: {
+						select: {
+							id: true,
+							atvrId: true,
+							name: true,
+						},
+					},
+					quantity: true,
+				},
+			},
+		},
+	});
+
+	return { totalItems, products };
+}
+
+export type NewProducts = typeof getNewProducts;
+export type NewProductsResponse = AwaitedReturnType<NewProducts>;
+export type NewProductsArgs = NonNullable<GetNewProductsOptions>;

@@ -13,6 +13,7 @@ import {
 } from 'remix';
 import invariant from 'tiny-invariant';
 import { CategoryFilter } from '~/components/category-filter';
+import { PaginationButton } from '~/components/pagination-button';
 import { ProductCard } from '~/components/product-card';
 import { getStoreInventory, StoreInventory } from '~/data';
 
@@ -51,31 +52,6 @@ export const loader: LoaderFunction = async ({ params, request, ...rest }) => {
 		},
 	});
 };
-
-interface PaginationButtonProps {
-	onClick: () => void;
-	disabled: boolean;
-	label: string;
-	className?: string;
-}
-
-function PaginationButton({
-	className,
-	label,
-	...props
-}: PaginationButtonProps) {
-	return (
-		<button
-			className={clsx(
-				'text-sm inline-block px-4 py-2 first:mr-2 rounded-sm shadow-md hover:shadow-lg hover:opacity-90 disabled:opacity-70 disabled:shadow-none disabled:cursor-default',
-				className,
-			)}
-			{...props}
-		>
-			{label}
-		</button>
-	);
-}
 
 export default function AtvrSlug() {
 	const loaderData = useLoaderData<StoreInventory>();
