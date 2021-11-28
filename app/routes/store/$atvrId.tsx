@@ -1,4 +1,6 @@
 import clsx from 'clsx';
+import format from 'date-fns/format';
+import parseISO from 'date-fns/parseISO';
 import { useEffect } from 'react';
 import {
 	LoaderFunction,
@@ -12,6 +14,11 @@ import invariant from 'tiny-invariant';
 import { CategoryFilter } from '~/components/category-filter';
 import { ProductCard } from '~/components/product-card';
 import { getStoreInventory, StoreInventory } from '~/data';
+
+function formatTime(date: string) {
+	const parsed = parseISO(date);
+	return format(parsed, 'HH:mm, dd.MM.yyyy');
+}
 
 export const loader: LoaderFunction = async ({ params, request, ...rest }) => {
 	invariant(params.atvrId, 'Missing atvr id');
@@ -116,6 +123,9 @@ export default function AtvrSlug() {
 		});
 	};
 
+	const lastUpdateAt = (data?.store?.inventory[0]?.createdAt ||
+		'') as unknown as string;
+
 	return (
 		<div>
 			<div className="flex flex-col md:flex-row justify-between items-stretch md:items-start">
@@ -126,16 +136,21 @@ export default function AtvrSlug() {
 					</small>
 				</h2>
 				<div className="flex-1 flex justify-between">
-					<button
-						onClick={handleSyncClick}
-						disabled={
-							syncFetcher.state === 'loading' ||
-							syncFetcher.state === 'submitting'
-						}
-						className="bg-green-800 text-white text-sm inline-block px-4 py-2 md:first:mr-2 rounded-sm shadow-md hover:shadow-lg hover:opacity-90 disabled:bg-green-300 disabled:text-gray-600 disabled:shadow-none disabled:cursor-default mr-auto mb-auto md:ml-4"
-					>
-						Sync now
-					</button>
+					<div>
+						<button
+							onClick={handleSyncClick}
+							disabled={
+								syncFetcher.state === 'loading' ||
+								syncFetcher.state === 'submitting'
+							}
+							className="bg-green-800 text-white text-sm inline-block px-4 py-2 md:first:mr-2 rounded-sm shadow-md hover:shadow-lg hover:opacity-90 disabled:bg-green-300 disabled:text-gray-600 disabled:shadow-none disabled:cursor-default mr-auto mb-auto md:ml-4"
+						>
+							Sync now
+						</button>
+						{lastUpdateAt && (
+							<small>Last sync at {formatTime(lastUpdateAt)}</small>
+						)}
+					</div>
 					<div>
 						<PaginationButton
 							onClick={handlePrevClick}
