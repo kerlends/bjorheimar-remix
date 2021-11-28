@@ -7,7 +7,7 @@
     "seed": "ts-node ./prisma/seed.ts"
   },
   "scripts": {
-    "build": "run-s build:*",
+    "build": "run-s build:css build:server",
     "build:server": "remix build",
     "build:css": "postcss styles --base styles --dir app/styles --env production",
     "dev": "run-p dev:*",
