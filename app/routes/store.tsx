@@ -7,7 +7,7 @@ export default function StoreRoute() {
 	const isLoading = transition.state === 'loading';
 
 	return (
-		<div className="overflow-y-auto max-h-screen p-4 relative">
+		<div className="overflow-y-auto max-h-screen pt-2 pr-2 md:p-4 relative">
 			<Overlay open={isLoading}>
 				<Spinner />
 			</Overlay>

@@ -3,6 +3,7 @@ import format from 'date-fns/format';
 import parseISO from 'date-fns/parseISO';
 import { useEffect } from 'react';
 import {
+	HeadersFunction,
 	LoaderFunction,
 	useFetcher,
 	useLoaderData,
@@ -19,6 +20,12 @@ function formatTime(date: string) {
 	const parsed = parseISO(date);
 	return format(parsed, 'HH:mm, dd.MM.yyyy');
 }
+
+export const headers: HeadersFunction = ({ loaderHeaders }) => {
+	return {
+		'Cache-Control': loaderHeaders.get('Cache-Control') || 'public, max-age=10',
+	};
+};
 
 export const loader: LoaderFunction = async ({ params, request, ...rest }) => {
 	invariant(params.atvrId, 'Missing atvr id');
@@ -71,12 +78,12 @@ function PaginationButton({
 }
 
 export default function AtvrSlug() {
-	const data = useLoaderData<StoreInventory>();
+	const loaderData = useLoaderData<StoreInventory>();
 	const transition = useTransition();
 	const syncFetcher = useFetcher<StoreInventory>();
 	const [searchParams, setSearchParams] = useSearchParams();
 
-	// const data = syncFetcher.data ? syncFetcher.data : loaderData;
+	const data = syncFetcher.data ? syncFetcher.data : loaderData;
 
 	const take = parseInt(searchParams.get('take') || '25', 10);
 	const page = parseInt(searchParams.get('page') || '0', 10);
@@ -147,9 +154,6 @@ export default function AtvrSlug() {
 						>
 							Sync now
 						</button>
-						{lastUpdateAt && (
-							<small>Last sync at {formatTime(lastUpdateAt)}</small>
-						)}
 					</div>
 					<div>
 						<PaginationButton
@@ -166,6 +170,14 @@ export default function AtvrSlug() {
 					</div>
 				</div>
 			</div>
+			{lastUpdateAt && (
+				<p className="text-right static md:relative">
+					<small className="absolute top-4 md:-top-2 right-4 md:right-2">
+						Last sync at <br className="md:hidden" />
+						{formatTime(lastUpdateAt)}
+					</small>
+				</p>
+			)}
 			<div className="flex mt-2 md:mt-0">
 				<CategoryFilter {...data.categories} />
 			</div>

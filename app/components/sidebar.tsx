@@ -14,14 +14,14 @@ export function Sidebar({ stores }: SidebarProps) {
 	};
 
 	return (
-		<aside className="overflow-y-auto max-h-screen py-4">
+		<aside className="overflow-y-auto max-h-screen py-4 pr-2 md:pr-0">
 			<ul>
 				{stores.map((store) => (
 					<li key={store.atvrId}>
 						<Link
 							prefetch="intent"
 							to={`/store/${store.atvrId}`}
-							className={clsx('block p-4 md:pr-12 hover:bg-gray-200', {
+							className={clsx('block p-3 md:p-4 md:pr-12 hover:bg-gray-200', {
 								'bg-green-200 hover:bg-green-100':
 									params.atvrId === store.atvrId,
 							})}
