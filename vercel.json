@@ -9,7 +9,7 @@
       "use": "@vercel/node"
     },
     {
-      "src": "build/**/*",
+      "src": "build/index.js",
       "use": "@vercel/node"
     }
   ],
