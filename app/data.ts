@@ -185,7 +185,7 @@ export async function getNewProducts({
 		},
 		where: {
 			createdAt: {
-				gte: subDays(new Date(), 14),
+				gte: subDays(new Date(), 60),
 			},
 		},
 		include: {
