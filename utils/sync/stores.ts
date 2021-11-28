@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import * as fns from 'date-fns';
-import { is } from 'date-fns/locale';
+import invariant from 'tiny-invariant';
 import * as atvr from '../atvr/client';
 import { AtvrStore } from '../atvr/types';
 
@@ -19,30 +19,52 @@ function nameToSlug(name: string) {
 		.replace(/æ/g, 'ae');
 }
 
-function fixMonthString(monthStr: string) {
-	const replacesWith = [
-		['júl.', 'júlí'],
-		['ágú.', 'ágúst'],
-	];
+const months = {
+	jan: 0,
+	feb: 1,
+	mar: 2,
+	apr: 3,
+	maí: 4,
+	jún: 5,
+	júl: 6,
+	ágú: 7,
+	sep: 8,
+	okt: 9,
+	nóv: 10,
+	des: 11,
+};
 
-	for (const [original, fixed] of replacesWith) {
-		if (monthStr.endsWith(original)) {
-			return monthStr.replace(original, fixed);
+type MonthKey = keyof typeof months;
+
+function monthStringToIndex(monthStr: string): number {
+	for (const key of Object.keys(months)) {
+		const value = months[key as MonthKey];
+		if (monthStr.startsWith(key)) {
+			return value;
 		}
 	}
 
-	return monthStr;
+	throw new Error(`Failed to map "${monthStr}" to month index`);
 }
-function monthStringToDate(monthStr: string): Date {
-	const fixedMonthStr = fixMonthString(monthStr);
-	if (fixedMonthStr.endsWith('ágúst')) {
-		const [day, month] = fixedMonthStr.split(' ');
-		return fns.parse(`${day} August`, 'd. MMMM', new Date());
-	}
 
-	return fns.parse(fixedMonthStr, 'd. MMMM', new Date(), {
-		locale: is,
-	});
+function monthStringToDate(monthStr: string): Date {
+	const re = monthStr.match(/(?<day>[0-9]+)\.\s(?<month>.*)/);
+
+	invariant(
+		typeof re?.groups?.day === 'string',
+		`Failed to extract day from "${monthStr}"`,
+	);
+	invariant(
+		typeof re?.groups?.month === 'string',
+		`Failed to extract month from "${monthStr}"`,
+	);
+
+	const month = monthStringToIndex(re.groups.month);
+
+	return fns.setDate(
+		fns.setMonth(new Date(), month),
+		parseInt(re.groups.day, 10),
+	);
 }
 
 function storeToHours(store: AtvrStore): {
@@ -69,6 +91,8 @@ function storeToHours(store: AtvrStore): {
 			let closes: null | string = null;
 			if (data.open !== 'Lokað') {
 				[opens, closes] = data.open.split(' - ');
+				const weekday = fns.getDay(date);
+				console.log({ id: store.PostCode, date, opens, closes, weekday, data });
 				return {
 					atvrStoreId: store.PostCode,
 					weekday: fns.getDay(date),
@@ -87,9 +111,9 @@ export default async function syncStores(prisma: PrismaClient) {
 	const atvrStores = await atvr.getStores();
 
 	await Promise.all(
-		atvrStores.map((store) => {
-			return prisma.store
-				.upsert({
+		atvrStores.map(async (store) => {
+			try {
+				return await prisma.store.upsert({
 					where: {
 						atvrId: store.PostCode,
 					},
@@ -119,12 +143,10 @@ export default async function syncStores(prisma: PrismaClient) {
 							})),
 						},
 					},
-				})
-				.catch((error) => {
-					console.group(store);
-					console.error(error);
-					console.groupEnd();
 				});
+			} catch (error) {
+				console.error(error);
+			}
 		}),
 	);
 
