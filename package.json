@@ -10,7 +10,7 @@
     "build": "run-s build:*",
     "build:server": "remix build",
     "build:css": "postcss styles --base styles --dir app/styles --env production",
-    "dev": "node ./env-config.js && run-p dev:*",
+    "dev": "run-p dev:*",
     "dev:server": "remix dev",
     "dev:css": "postcss styles --base styles --dir app/styles -w",
     "postinstall": "remix setup node",

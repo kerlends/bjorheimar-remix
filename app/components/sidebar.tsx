@@ -21,12 +21,12 @@ export function Sidebar({ stores }: SidebarProps) {
 						<Link
 							prefetch="intent"
 							to={`/store/${store.atvrId}`}
-							className={clsx('block p-4 hover:bg-gray-200', {
+							className={clsx('block p-4 md:pr-12 hover:bg-gray-200', {
 								'bg-green-200 hover:bg-green-100':
 									params.atvrId === store.atvrId,
 							})}
 						>
-							<p>{store.name}</p>
+							<p className="hidden md:block">{store.name}</p>
 							<strong className="text-right text-gray-500">
 								{store.atvrId}
 							</strong>

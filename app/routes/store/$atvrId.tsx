@@ -1,4 +1,5 @@
 import clsx from 'clsx';
+import { useEffect } from 'react';
 import {
 	LoaderFunction,
 	useFetcher,
@@ -30,11 +31,15 @@ export const loader: LoaderFunction = async ({ params, request, ...rest }) => {
 		tasteProfileId,
 	});
 
+	return data;
+
+	/*
 	return json(data, {
 		headers: {
 			'Cache-Control': 'max-age=604800, stale-while-revalidate=86400',
 		},
 	});
+	*/
 };
 
 interface PaginationButtonProps {
@@ -65,8 +70,10 @@ function PaginationButton({
 export default function AtvrSlug() {
 	const data = useLoaderData<StoreInventory>();
 	const transition = useTransition();
-	const fetcher = useFetcher();
+	const syncFetcher = useFetcher<StoreInventory>();
 	const [searchParams, setSearchParams] = useSearchParams();
+
+	// const data = syncFetcher.data ? syncFetcher.data : loaderData;
 
 	const take = parseInt(searchParams.get('take') || '25', 10);
 	const page = parseInt(searchParams.get('page') || '0', 10);
@@ -74,8 +81,14 @@ export default function AtvrSlug() {
 
 	const isLoading = transition.state === 'loading';
 
+	useEffect(() => {
+		if (syncFetcher.state === 'idle' && syncFetcher.type === 'done') {
+			setSearchParams({});
+		}
+	}, [syncFetcher, data.store.atvrId]);
+
 	const handleSyncClick = () => {
-		fetcher.submit(
+		syncFetcher.submit(
 			{ atvrId: data.store.atvrId },
 			{ method: 'post', action: `/store/${data.store.atvrId}/sync` },
 		);
@@ -109,38 +122,43 @@ export default function AtvrSlug() {
 
 	return (
 		<div>
-			<div className="flex justify-end">
-				<CategoryFilter {...data.categories} />
-			</div>
-			<div className="flex justify-between items-center">
+			<div className="flex flex-col md:flex-row justify-between items-stretch md:items-start">
 				<h2>
-					Browsing inventory for {data.store.name}
+					{`${data.store.name} (${data.store.atvrId})`}
 					<small className="text-xs block">
 						(page {page + 1} of {totalPages + 1})
 					</small>
 				</h2>
-				<button
-					onClick={handleSyncClick}
-					disabled={fetcher.state === 'loading'}
-					className="text-sm inline-block px-4 py-2 first:mr-2 rounded-sm shadow-md hover:shadow-lg hover:opacity-90 disabled:opacity-70 disabled:shadow-none disabled:cursor-default ml-auto"
-				>
-					Sync now
-				</button>
-				<div>
-					<PaginationButton
-						onClick={handlePrevClick}
-						disabled={page === 0 || isLoading}
-						label="Prev"
-					/>
-					<PaginationButton
-						onClick={handleNextClick}
-						className="bg-gray-800 text-white"
-						disabled={page === totalPages || isLoading}
-						label="Next"
-					/>
+				<div className="flex-1 flex justify-between">
+					<button
+						onClick={handleSyncClick}
+						disabled={
+							syncFetcher.state === 'loading' ||
+							syncFetcher.state === 'submitting'
+						}
+						className="bg-green-800 text-white text-sm inline-block px-4 py-2 md:first:mr-2 rounded-sm shadow-md hover:shadow-lg hover:opacity-90 disabled:bg-green-300 disabled:text-gray-600 disabled:shadow-none disabled:cursor-default mr-auto mb-auto md:ml-4"
+					>
+						Sync now
+					</button>
+					<div>
+						<PaginationButton
+							onClick={handlePrevClick}
+							disabled={page === 0 || isLoading}
+							label="Prev"
+						/>
+						<PaginationButton
+							onClick={handleNextClick}
+							className="bg-gray-800 text-white"
+							disabled={page === totalPages || isLoading}
+							label="Next"
+						/>
+					</div>
 				</div>
 			</div>
-			<div className="grid grid-cols-3 xl:grid-cols-4 gap-6">
+			<div className="flex mt-2 md:mt-0">
+				<CategoryFilter {...data.categories} />
+			</div>
+			<div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-6">
 				{data.store.inventory.map((item) => (
 					<ProductCard key={item.id} {...item} />
 				))}

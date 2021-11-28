@@ -1,9 +1,10 @@
 import { PrismaClient, ContainerType } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { createFuzzySearch } from '../fuzzy';
 import { uploadImage } from '../cloudinary';
-import * as atvr from '../atvr/client';
 import getAtvrStoreInventory from '../atvr/atvr-store-inventory';
 import { AtvrProduct } from '../atvr/types';
+import { getAtvrProductDescription } from '~/utils/atvr-description';
 
 interface PrismaConfig {
 	prisma: PrismaClient;
@@ -120,8 +121,6 @@ async function buildImageCache(
 	return imageCache;
 }
 
-type ImageCache = Awaited<ReturnType<typeof buildImageCache>>;
-
 async function getManufacturersFuzzySet(config: PrismaConfig) {
 	const fuzzySet = createFuzzySearch(0.8);
 
@@ -133,6 +132,149 @@ async function getManufacturersFuzzySet(config: PrismaConfig) {
 	}
 
 	return fuzzySet;
+}
+
+async function createNewProducts(
+	products: AtvrProduct[],
+	config: { prisma: PrismaClient },
+	fuzzySet: any,
+	imageCache: any,
+) {
+	const knownCategories = await config.prisma.productCategory.findMany();
+	const productsWithUnknownCategories = products.filter(
+		(p) => !knownCategories.find((c) => c.atvrId === p.ProductTasteGroup),
+	);
+
+	if (productsWithUnknownCategories.length > 0) {
+		const tasteGroupsByCategory = productsWithUnknownCategories.reduce<
+			Record<string, string[]>
+		>((byCategory, product) => {
+			const key = product.ProductTasteGroup;
+			const profiles = byCategory[key] || [];
+			return {
+				...byCategory,
+				[key]: profiles.concat(product.ProductTasteGroup2),
+			};
+		}, {});
+		const categoryTasteGroupsArr = Object.entries(tasteGroupsByCategory).map(
+			([category, profiles]) => ({
+				category,
+				profiles,
+			}),
+		);
+
+		const numCreatedCategories = await config.prisma.productCategory.createMany(
+			{
+				data: categoryTasteGroupsArr.map(({ category, profiles }) => ({
+					atvrId: category,
+					name: 'Unknown category',
+					description: 'Unknown category',
+				})),
+			},
+		);
+		console.log(`[atvr] created ${numCreatedCategories} new categories`);
+
+		const createdCategories = await config.prisma.productCategory.findMany({
+			where: {
+				atvrId: {
+					in: categoryTasteGroupsArr.map(({ category }) => category),
+				},
+			},
+		});
+
+		const numCreatedProfiles = await config.prisma.tasteProfile.createMany({
+			data: createdCategories.reduce<Prisma.TasteProfileCreateManyInput[]>(
+				(profiles, category) => [
+					...profiles,
+					...tasteGroupsByCategory[category.atvrId].map((profile) => ({
+						atvrId: profile,
+						name: 'Unknown taste profile',
+						description: 'Unknown taste profile',
+						productCategoryId: category.id,
+					})),
+				],
+				[],
+			),
+		});
+		console.log(`[atvr] created ${numCreatedProfiles} new profiles`);
+	}
+
+	const categories = await config.prisma.productCategory.findMany({
+		include: { tasteProfiles: { select: { id: true, atvrId: true } } },
+	});
+	type Category = typeof categories[number];
+	const categoriesById = categories.reduce<Record<string, Category>>(
+		(byAtvrId, category) => ({
+			...byAtvrId,
+			[category.atvrId]: category,
+		}),
+		{},
+	);
+
+	type CategoryProfile = Category['tasteProfiles'][number];
+
+	const tasteProfilesById = categories.reduce<Record<string, CategoryProfile>>(
+		(byId, category) => ({
+			...byId,
+			...category.tasteProfiles.reduce<
+				Record<string, Category['tasteProfiles'][0]>
+			>((byId, profile) => ({ ...byId, [profile.atvrId]: profile }), {}),
+		}),
+		{},
+	);
+
+	const manufacturers = await config.prisma.manufacturer.findMany();
+	const manufacturersByName = manufacturers.reduce<
+		Record<string, typeof manufacturers[number]>
+	>(
+		(byName, manufacturer) => ({
+			...byName,
+			[manufacturer.name]: manufacturer,
+		}),
+		{},
+	);
+
+	const productDescriptionsById = await Promise.all(
+		products.map(async (p) => {
+			const id = p.ProductID.toString();
+			return {
+				id,
+				description: await getAtvrProductDescription(id),
+			};
+		}),
+	).then((arr) =>
+		arr.reduce<Record<string, string>>(
+			(byId, item) => ({
+				...byId,
+				[item.id]: item.description,
+			}),
+			{},
+		),
+	);
+
+	const result = await config.prisma.product.createMany({
+		data: products.map((product) => {
+			const atvrProductId = product.ProductID.toString();
+			const maker =
+				fuzzySet.get(product.ProductProducer) || product.ProductProducer;
+			return {
+				name: product.ProductName,
+				description: productDescriptionsById[atvrProductId],
+				manufacturerId: manufacturersByName[maker].id,
+				containerType: parseContainerType(product.ProductContainerType),
+				volume: product.ProductBottledVolume,
+				alcohol: product.ProductAlchoholVolume,
+				placeOfOrigin: product.ProductCountryOfOrigin,
+				isTempProduct: product.ProductIsTemporaryOnSale,
+				atvrId: product.ProductID.toString(),
+				productCategoryId: categoriesById[product.ProductTasteGroup].id,
+				tasteProfileId: tasteProfilesById[product.ProductTasteGroup2].id,
+				image: imageCache[atvrProductId],
+			};
+		}),
+	});
+
+	console.log('[atvr] added %s new products', result.count);
 }
 
 export default async function updateStoreProductInventory(
@@ -154,86 +296,85 @@ export default async function updateStoreProductInventory(
 	const imageCache = await buildImageCache(products, existingProductsByAtvrId);
 	const fuzzySet = await getManufacturersFuzzySet(config);
 
-	const upsertTransactions = products.map((product) => {
-		if (!product.ProductStoreSelected) {
-			throw new Error(
-				`Failed to update product inventory: Product.ProductStoreSelected missing for product \`${product.ProductID}\` with selected store id ${storeId}`,
-			);
-		}
-		return config.prisma.product.upsert({
-			where: {
-				atvrId: product.ProductID.toString(),
+	const newProducts = products.filter(
+		(p) => !existingProductsByAtvrId[p.ProductID.toString()],
+	);
+
+	if (newProducts.length > 0) {
+		await createNewProducts(newProducts, config, fuzzySet, imageCache);
+	}
+
+	const allProducts = await config.prisma.product.findMany({
+		where: {
+			atvrId: {
+				in: products.map((p) => p.ProductID.toString()),
 			},
-			create: {
-				name: product.ProductName,
-				manufacturer: {
-					connect: {
-						name:
-							fuzzySet.get(product.ProductProducer) || product.ProductProducer,
-					},
-				},
-				containerType: parseContainerType(product.ProductContainerType),
-				volume: product.ProductBottledVolume,
-				alcohol: product.ProductAlchoholVolume,
-				placeOfOrigin: product.ProductCountryOfOrigin,
-				isTempProduct: product.ProductIsTemporaryOnSale,
-				atvrId: product.ProductID.toString(),
-				category: {
-					connectOrCreate: {
-						where: { atvrId: product.ProductTasteGroup },
-						create: {
-							atvrId: product.ProductTasteGroup,
-							name: 'Unknown category',
-							description: 'Unknown category',
-						},
-					},
-				},
-				tasteProfile: {
-					connectOrCreate: {
-						where: { atvrId: product.ProductTasteGroup2 },
-						create: {
-							atvrId: product.ProductTasteGroup2,
-							name: 'Unknown taste profile',
-							description: 'Unknown taste profile',
-						},
-					},
-				},
-				inventory: {
-					create: {
-						store: {
-							connect: {
-								atvrId: storeId,
-							},
-						},
-						available: product.ProductIsAvailableInStores,
-						price: product.ProductPrice,
-						quantity: product.ProductStoreSelected.Quantity ?? 0,
-						atvrProductId: product.ProductID.toString(),
-						latest: true,
-					},
-				},
-				image: imageCache[product.ProductID.toString()],
-			},
-			update: {
-				inventory: {
-					create: {
-						store: {
-							connect: {
-								atvrId: storeId,
-							},
-						},
-						quantity: product.ProductStoreSelected.Quantity ?? 0,
-						available: product.ProductIsAvailableInStores,
-						price: product.ProductPrice,
-						latest: true,
-						atvrProductId: product.ProductID.toString(),
-					},
-				},
-				image: imageCache[product.ProductID.toString()],
-			},
-		});
+		},
 	});
 
-	await Promise.all(upsertTransactions);
+	const allProductsByAtvrId = allProducts.reduce<
+		Record<string, typeof allProducts[number]>
+	>(
+		(byId, product) => ({
+			...byId,
+			[product.atvrId]: product,
+		}),
+		{},
+	);
+
+	const store = await config.prisma.store.update({
+		where: { atvrId: storeId },
+		data: {
+			inventory: {
+				createMany: {
+					data: products.map((product) => ({
+						available: product.ProductIsAvailableInStores,
+						price: product.ProductPrice,
+						quantity: product.ProductStoreSelected?.Quantity ?? 0,
+						atvrProductId: product.ProductID.toString(),
+						productId: allProductsByAtvrId[product.ProductID.toString()].id,
+						latest: true,
+					})),
+				},
+			},
+		},
+		include: {
+			inventory: {
+				take: 25,
+				skip: 0,
+				where: {
+					latest: true,
+					quantity: { gt: 0 },
+				},
+				orderBy: { product: { createdAt: 'desc' } },
+				include: {
+					product: {
+						select: {
+							volume: true,
+							description: true,
+							atvrId: true,
+							name: true,
+							alcohol: true,
+							image: true,
+							createdAt: true,
+							tasteProfile: {
+								select: {
+									name: true,
+								},
+							},
+							manufacturer: {
+								select: {
+									name: true,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	});
+
 	console.timeEnd(label);
+
+	return store;
 }

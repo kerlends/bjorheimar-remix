@@ -1,16 +1,26 @@
 import type { ActionFunction } from 'remix';
 import { json } from 'remix';
 import invariant from 'tiny-invariant';
+import { getCategories } from '~/data';
+import { db } from '~/utils/db.server';
+import { syncInventory } from '~/utils/sync';
 
-export const action: ActionFunction = async ({ params }) => {
+export const action: ActionFunction = async ({ params, request }) => {
 	invariant(typeof params.atvrId === 'string', 'Missing parameter: atvrId');
-
-	const url = new URL(
-		'https://us-central1-bjorheimar.cloudfunctions.net/syncStore',
-	);
-	url.searchParams.set('storeId', params.atvrId);
-
-	const result = await fetch(url.href, { method: 'POST' });
-
-	return json(result);
+	try {
+		const store = await syncInventory({ prisma: db }, params.atvrId);
+		const [totalItems, categories] = await Promise.all([
+			db.productInventory.count({
+				where: {
+					store: { atvrId: params.atvrId },
+					latest: true,
+					quantity: { gt: 0 },
+				},
+			}),
+			getCategories(params.atvrId),
+		]);
+		return json({ store, totalItems, categories });
+	} catch (error) {
+		return json({ error }, { status: 400, statusText: 'Sync failed' });
+	}
 };

@@ -92,7 +92,6 @@ function storeToHours(store: AtvrStore): {
 			if (data.open !== 'Lokað') {
 				[opens, closes] = data.open.split(' - ');
 				const weekday = fns.getDay(date);
-				console.log({ id: store.PostCode, date, opens, closes, weekday, data });
 				return {
 					atvrStoreId: store.PostCode,
 					weekday: fns.getDay(date),

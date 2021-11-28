@@ -60,7 +60,7 @@ export const unstable_shouldReload = () => false;
 
 export default function App() {
 	return (
-		<Document>
+		<Document title="Bjorheimar">
 			<Layout>
 				<Outlet />
 			</Layout>
