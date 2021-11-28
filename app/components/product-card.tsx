@@ -33,15 +33,15 @@ function Table({
 	return (
 		<table className="text-left w-full mt-auto">
 			<tbody>
+				<TableRow label="Alcohol" value={`${product.alcohol}%`} />
+				<TableRow label="Volume" value={`${product.volume} ml`} />
+				<TableRow label="Price" value={`${price} ISK`} />
 				<TableRow
 					label="Added"
 					value={format(parseISO(product.createdAt as any), 'dd.MM.yyyy')}
 				/>
-				<TableRow label="Alcohol %" value={product.alcohol} />
-				<TableRow label="Volume" value={`${product.volume}`} />
-				<TableRow label="Price" value={`${price} ISK`} />
 				<TableRow
-					label="Last update"
+					label="Last updated"
 					value={format(parseISO(updatedAt as any), 'dd.MM.yyyy')}
 				/>
 			</tbody>

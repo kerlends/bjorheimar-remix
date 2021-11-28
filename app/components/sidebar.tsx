@@ -1,4 +1,4 @@
-import { Link, useParams, useFetcher } from 'remix';
+import { Link, useParams } from 'remix';
 import clsx from 'clsx';
 import type { LoaderData as Stores } from '~/root';
 
@@ -8,10 +8,6 @@ interface SidebarProps {
 
 export function Sidebar({ stores }: SidebarProps) {
 	const params = useParams();
-	const fetcher = useFetcher();
-	const handleSyncClick = (atvrId: string) => {
-		fetcher.submit({ atvrId }, { method: 'post', action: '/api/sync' });
-	};
 
 	return (
 		<aside className="overflow-y-auto max-h-screen py-4 pr-2 md:pr-0">
