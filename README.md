@@ -21,6 +21,7 @@ npm run build
 ```
 
 Then run the app in production mode:
+sd
 
 ```sh
 npm start
