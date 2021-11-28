@@ -31,13 +31,9 @@ export const loader: LoaderFunction = async ({ params, request, ...rest }) => {
 		tasteProfileId,
 	});
 
-	const hour = 60 * 60;
-	const maxAge = hour * 6;
 	return json(data, {
 		headers: {
-			'Cache-Control': `max-age=${maxAge}, stale-while-revalidate=${Math.floor(
-				maxAge / 7,
-			)}`,
+			'Cache-Control': `max-age=600, s-max-age=604800 stale-while-revalidate=315400000`,
 		},
 	});
 };
