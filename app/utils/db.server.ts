@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 
 let db: PrismaClient;
 
@@ -10,7 +11,15 @@ declare global {
 // the server with every change, but we want to make sure we don't
 // create a new connection to the DB with every change either.
 if (process.env.NODE_ENV === 'production') {
-	db = new PrismaClient();
+	const enableQueryLogging = ['true', '1'].includes(
+		process.env.ENABLE_QUERY_LOGGING || '',
+	);
+	const options: Prisma.PrismaClientOptions = enableQueryLogging
+		? {
+				log: ['query'],
+		  }
+		: {};
+	db = new PrismaClient(options);
 	db.$connect();
 } else {
 	if (!global.__db) {
