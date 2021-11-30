@@ -11,15 +11,7 @@ declare global {
 // the server with every change, but we want to make sure we don't
 // create a new connection to the DB with every change either.
 if (process.env.NODE_ENV === 'production') {
-	const enableQueryLogging = ['true', '1'].includes(
-		process.env.ENABLE_QUERY_LOGGING || '',
-	);
-	const options: Prisma.PrismaClientOptions = enableQueryLogging
-		? {
-				log: ['query'],
-		  }
-		: {};
-	db = new PrismaClient(options);
+	db = new PrismaClient();
 	db.$connect();
 } else {
 	if (!global.__db) {
@@ -27,6 +19,26 @@ if (process.env.NODE_ENV === 'production') {
 		global.__db.$connect();
 	}
 	db = global.__db;
+}
+
+const enableQueryLogging = ['true', '1'].includes(
+	process.env.ENABLE_QUERY_LOGGING || '',
+);
+
+if (enableQueryLogging) {
+	db.$use(async (params, next) => {
+		const before = Date.now();
+
+		const result = await next(params);
+
+		const after = Date.now();
+
+		console.log(
+			`Query ${params.model}.${params.action} took ${after - before}ms`,
+		);
+
+		return result;
+	});
 }
 
 export { db };
