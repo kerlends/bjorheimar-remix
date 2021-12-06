@@ -149,9 +149,11 @@ function Layout({ children }: { children: React.ReactNode }) {
 		<div className="flex">
 			<Sidebar stores={data} />
 			<main className="flex-1 relative">
-				<Overlay open={isLoading}>
-					<Spinner />
-				</Overlay>
+				{isLoading && (
+					<Overlay open>
+						<Spinner />
+					</Overlay>
+				)}
 				{children}
 			</main>
 		</div>
