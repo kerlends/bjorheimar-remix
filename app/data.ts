@@ -1,44 +1,115 @@
+import type { Prisma } from '@prisma/client';
 import { subDays } from 'date-fns';
 import invariant from 'tiny-invariant';
 import { db } from '~/utils/db.server';
 
-export async function getCategories(atvrId?: string) {
-	const totalCount = await db.productInventory.count({
-		where: {
-			store: { atvrId },
-			latest: true,
-			quantity: { gt: 0 },
-		},
-	});
+function parseNumericQuery(query: string): Prisma.FloatFilter | null {
+	console.log('Parsing query:', query);
+	const numericMatch = query.match(
+		/(?<quantifier>\>|\<|=|\>=|\<=)?(?<value>\d+(\.?\d+)?)/,
+	);
+	console.log('Query parsed with result:', numericMatch);
 
-	const productCategories = await db.productCategory.findMany({
-		where: {
-			Product: {
-				some: {
-					inventory: {
-						some: {
-							store: { atvrId },
-							quantity: { gt: 0 },
-							latest: true,
-						},
-					},
+	if (numericMatch?.groups?.value) {
+		const { quantifier, value } = numericMatch.groups;
+		const parsedValue = parseFloat(value);
+		switch (quantifier) {
+			case '>':
+				return { gt: parsedValue };
+			case '<':
+				return { lt: parsedValue };
+			case '>=':
+				return { gte: parsedValue };
+			case '<=':
+				return { lte: parsedValue };
+			default:
+				return { equals: parsedValue };
+		}
+	}
+	return null;
+}
+
+function getProductFilter(query: string = ''): Prisma.ProductWhereInput {
+	if (!query) return {};
+
+	const floatFilter = parseNumericQuery(query);
+	if (floatFilter) {
+		return { alcohol: floatFilter };
+	}
+
+	return {
+		OR: [
+			{
+				name: { contains: query, mode: 'insensitive' },
+			},
+			{
+				placeOfOrigin: { contains: query, mode: 'insensitive' },
+			},
+			{
+				tasteProfile: {
+					name: { contains: query, mode: 'insensitive' },
+				},
+			},
+			{
+				category: { name: { contains: query, mode: 'insensitive' } },
+			},
+		],
+	};
+}
+
+export async function getAllStores() {
+	return await db.store.findMany({
+		select: {
+			atvrId: true,
+			name: true,
+			hours: {
+				select: {
+					opensAt: true,
+					closesAt: true,
+					weekday: true,
 				},
 			},
 		},
 		orderBy: {
-			Product: {
-				_count: 'desc',
-			},
+			atvrId: 'asc',
 		},
-		select: {
-			id: true,
-			name: true,
-			_count: {
-				select: {
-					Product: true,
+	});
+}
+export type GetAllStores = AwaitedReturnType<typeof getAllStores>;
+
+export async function getCategories(atvrId?: string, query?: string) {
+	const whereProduct = getProductFilter(query);
+
+	const [totalCount, productCategories, productCountsByCategoryId] =
+		await Promise.all([
+			db.productInventory.count({
+				where: {
+					store: { atvrId },
+					latest: true,
+					quantity: { gt: 0 },
+					product: whereProduct,
 				},
-			},
-			tasteProfiles: {
+			}),
+			db.productCategory.findMany({
+				where: {
+					Product: {
+						some: {
+							...whereProduct,
+							inventory: {
+								some: {
+									store: { atvrId },
+									quantity: { gt: 0 },
+									latest: true,
+								},
+							},
+						},
+					},
+				},
+				orderBy: {
+					Product: {
+						_count: 'desc',
+					},
+				},
 				select: {
 					id: true,
 					name: true,
@@ -47,27 +118,37 @@ export async function getCategories(atvrId?: string) {
 							Product: true,
 						},
 					},
+					tasteProfiles: {
+						select: {
+							id: true,
+							name: true,
+							_count: {
+								select: {
+									Product: true,
+								},
+							},
+						},
+					},
 				},
-			},
-		},
-	});
-
-	const productCountsByCategoryId = await db.product.groupBy({
-		by: ['productCategoryId'],
-		orderBy: { productCategoryId: 'asc' },
-		where: {
-			inventory: {
-				some: {
-					store: { atvrId },
-					quantity: { gt: 0 },
-					latest: true,
+			}),
+			db.product.groupBy({
+				by: ['productCategoryId'],
+				orderBy: { productCategoryId: 'asc' },
+				where: {
+					...whereProduct,
+					inventory: {
+						some: {
+							store: { atvrId },
+							quantity: { gt: 0 },
+							latest: true,
+						},
+					},
 				},
-			},
-		},
-		_count: {
-			_all: true,
-		},
-	});
+				_count: {
+					_all: true,
+				},
+			}),
+		]);
 
 	const countsByCategoryId = productCountsByCategoryId.reduce<{
 		[key: string]: number;
@@ -92,6 +173,106 @@ export async function getCategories(atvrId?: string) {
 export type GetCategories = AwaitedReturnType<typeof getCategories>;
 export type GetCategoriesItem = GetCategories['categories'][number];
 
+export interface SearchStoreInventoryOptions {
+	query: string;
+	take?: number;
+	skip?: number;
+}
+
+export async function searchStoreInventory(
+	atvrId: string,
+	{ query, take = 15, skip = 0 }: SearchStoreInventoryOptions,
+) {
+	return await db.productInventory.findMany({
+		orderBy: { product: { createdAt: 'desc' } },
+		take,
+		skip,
+		where: {
+			store: { atvrId },
+			latest: true,
+			product: getProductFilter(query),
+		},
+		include: {
+			product: {
+				select: {
+					volume: true,
+					description: true,
+					atvrId: true,
+					name: true,
+					alcohol: true,
+					image: true,
+					createdAt: true,
+					tasteProfile: {
+						select: {
+							name: true,
+						},
+					},
+					manufacturer: {
+						select: {
+							name: true,
+						},
+					},
+				},
+			},
+		},
+	});
+}
+
+export type SearchStoreInventory = AwaitedReturnType<
+	typeof searchStoreInventory
+>;
+
+export interface GetStoreSummaryOptions {
+	productCategoryId?: string;
+	tasteProfileId?: string;
+	query?: string;
+}
+
+export async function getStoreSummary(
+	atvrId: string,
+	{ productCategoryId, tasteProfileId, query }: GetStoreSummaryOptions,
+) {
+	const [totalItems, store, categories, lastInventoryEntry] = await Promise.all(
+		[
+			db.productInventory.count({
+				where: {
+					store: { atvrId },
+					product: {
+						productCategoryId,
+						tasteProfileId,
+						...getProductFilter(query),
+					},
+					latest: true,
+				},
+			}),
+			db.store.findUnique({
+				where: { atvrId },
+			}),
+			getCategories(atvrId, query),
+			db.productInventory.findFirst({
+				where: {
+					store: { atvrId },
+					latest: true,
+				},
+				orderBy: { createdAt: 'desc' },
+				select: {
+					createdAt: true,
+				},
+			}),
+		],
+	);
+
+	invariant(store !== null, `Store not found with id "${atvrId}"`);
+
+	return {
+		store,
+		totalItems,
+		categories,
+		lastSync: lastInventoryEntry?.createdAt ?? null,
+	};
+}
+
+export type GetStoreSummary = AwaitedReturnType<typeof getStoreSummary>;
 export interface GetStoreInventoryOptions {
 	take: number;
 	skip: number;
@@ -103,18 +284,6 @@ export async function getStoreInventory(
 	atvrId: string,
 	{ take, skip, productCategoryId, tasteProfileId }: GetStoreInventoryOptions,
 ) {
-	const totalItems = await db.productInventory.count({
-		where: {
-			store: { atvrId },
-			product: {
-				productCategoryId,
-				tasteProfileId,
-			},
-			latest: true,
-			quantity: { gt: 0 },
-		},
-	});
-
 	const store = await db.store.findUnique({
 		where: { atvrId },
 		include: {
@@ -123,7 +292,7 @@ export async function getStoreInventory(
 				skip,
 				where: {
 					latest: true,
-					quantity: { gt: 0 },
+					// quantity: { gt: 0 },
 					product: { productCategoryId, tasteProfileId },
 				},
 				orderBy: { product: { createdAt: 'desc' } },
@@ -156,10 +325,11 @@ export async function getStoreInventory(
 
 	invariant(store !== null, `Store not found with id "${atvrId}"`);
 
-	return { store, totalItems, categories: await getCategories(atvrId) };
+	return store;
 }
-export type StoreInventory = AwaitedReturnType<typeof getStoreInventory>;
-export type StoreInventoryItem = StoreInventory['store']['inventory'][number];
+
+export type GetStoreInventory = AwaitedReturnType<typeof getStoreInventory>;
+export type GetStoreInventoryItem = GetStoreInventory['inventory'][number];
 
 interface GetNewProductsOptions {
 	take?: number;
@@ -170,60 +340,63 @@ export async function getNewProducts({
 	take = 40,
 	skip = 0,
 }: GetNewProductsOptions = {}) {
-	const totalItems = await db.product.count({
-		where: {
-			createdAt: {
-				gte: subDays(new Date(), 14),
-			},
-		},
-	});
-	const products = await db.product.findMany({
-		take,
-		skip,
-		orderBy: {
-			createdAt: 'desc',
-		},
-		where: {
-			createdAt: {
-				gte: subDays(new Date(), 60),
-			},
-		},
-		include: {
-			tasteProfile: {
-				select: {
-					id: true,
-					atvrId: true,
-					name: true,
+	const [totalItems, products] = await Promise.all([
+		db.product.count({
+			where: {
+				createdAt: {
+					gte: subDays(new Date(), 14),
 				},
 			},
-			manufacturer: {
-				select: { name: true },
+		}),
+
+		db.product.findMany({
+			take,
+			skip,
+			orderBy: {
+				createdAt: 'desc',
 			},
-			inventory: {
-				where: {
-					quantity: { gt: 0 },
-					latest: { equals: true },
+			where: {
+				createdAt: {
+					gte: subDays(new Date(), 60),
 				},
-				orderBy: {
-					store: { atvrId: 'asc' },
-				},
-				select: {
-					store: {
-						select: {
-							id: true,
-							atvrId: true,
-							name: true,
-						},
+			},
+			include: {
+				tasteProfile: {
+					select: {
+						id: true,
+						atvrId: true,
+						name: true,
 					},
-					quantity: true,
+				},
+				manufacturer: {
+					select: { name: true },
+				},
+				inventory: {
+					where: {
+						quantity: { gt: 0 },
+						latest: { equals: true },
+					},
+					orderBy: {
+						store: { atvrId: 'asc' },
+					},
+					select: {
+						store: {
+							select: {
+								id: true,
+								atvrId: true,
+								name: true,
+							},
+						},
+						quantity: true,
+					},
 				},
 			},
-		},
-	});
+		}),
+	]);
 
 	return { totalItems, products };
 }
 
-export type NewProducts = typeof getNewProducts;
-export type NewProductsResponse = AwaitedReturnType<NewProducts>;
-export type NewProductsArgs = NonNullable<GetNewProductsOptions>;
+export type GetNewProducts = AwaitedReturnType<typeof getNewProducts>;
+export type GetNewProductsItem = GetNewProducts['products'][number];
+export type GetNewProductsArgs = NonNullable<GetNewProductsOptions>;

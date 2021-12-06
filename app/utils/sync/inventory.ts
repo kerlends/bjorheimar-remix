@@ -1,7 +1,7 @@
 import { PrismaClient, ContainerType } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 import { createFuzzySearch } from '../fuzzy';
-import { uploadImage } from '../cloudinary';
+import { uploadImage } from '../cloudinary.server';
 import getAtvrStoreInventory from '../atvr/atvr-store-inventory';
 import { AtvrProduct } from '../atvr/types';
 import { getAtvrProductDescription } from '~/utils/atvr-description';
@@ -100,6 +100,7 @@ async function buildImageCache(
 	products: AtvrProduct[],
 	existingProducts: ExistingProductsMap,
 ) {
+	const start = Date.now();
 	const imageCache: Record<string, string | null> = {};
 
 	await Promise.all(
@@ -118,13 +119,20 @@ async function buildImageCache(
 		}),
 	);
 
+	console.log('Image cache created (%s ms)', (Date.now() - start).toFixed(0));
+
 	return imageCache;
 }
 
 async function getManufacturersFuzzySet(config: PrismaConfig) {
 	const fuzzySet = createFuzzySearch(0.8);
 
-	const allManufacturers = await config.prisma.manufacturer.findMany();
+	const allManufacturers = await config.prisma.manufacturer.findMany({
+		select: {
+			id: true,
+			name: true,
+		},
+	});
 	for (const brewer of allManufacturers) {
 		if (!fuzzySet.get(brewer.name)) {
 			fuzzySet.add(brewer.name);
@@ -140,6 +148,21 @@ async function createNewProducts(
 	fuzzySet: any,
 	imageCache: any,
 ) {
+	const incomingCategories = Array.from(
+		new Set(products.map((p) => p.ProductTasteGroup)),
+	);
+	const numExistingMatched = await config.prisma.productCategory.count({
+		where: {
+			atvrId: {
+				in: incomingCategories,
+			},
+		},
+	});
+
+	if (incomingCategories.length - 1 === numExistingMatched) {
+		return;
+	}
+
 	const knownCategories = await config.prisma.productCategory.findMany();
 	const productsWithUnknownCategories = products.filter(
 		(p) => !knownCategories.find((c) => c.atvrId === p.ProductTasteGroup),
@@ -165,7 +188,7 @@ async function createNewProducts(
 
 		const numCreatedCategories = await config.prisma.productCategory.createMany(
 			{
-				data: categoryTasteGroupsArr.map(({ category, profiles }) => ({
+				data: categoryTasteGroupsArr.map(({ category }) => ({
 					atvrId: category,
 					name: 'Unknown category',
 					description: 'Unknown category',
@@ -322,7 +345,7 @@ export default async function updateStoreProductInventory(
 		{},
 	);
 
-	const store = await config.prisma.store.update({
+	await config.prisma.store.update({
 		where: { atvrId: storeId },
 		data: {
 			inventory: {
@@ -338,43 +361,5 @@ export default async function updateStoreProductInventory(
 				},
 			},
 		},
-		include: {
-			inventory: {
-				take: 25,
-				skip: 0,
-				where: {
-					latest: true,
-					quantity: { gt: 0 },
-				},
-				orderBy: { product: { createdAt: 'desc' } },
-				include: {
-					product: {
-						select: {
-							volume: true,
-							description: true,
-							atvrId: true,
-							name: true,
-							alcohol: true,
-							image: true,
-							createdAt: true,
-							tasteProfile: {
-								select: {
-									name: true,
-								},
-							},
-							manufacturer: {
-								select: {
-									name: true,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
 	});
-
-	console.timeEnd(label);
-
-	return store;
 }

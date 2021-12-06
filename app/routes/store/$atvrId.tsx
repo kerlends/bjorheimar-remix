@@ -1,21 +1,22 @@
-import clsx from 'clsx';
 import format from 'date-fns/format';
 import parseISO from 'date-fns/parseISO';
-import { useEffect } from 'react';
 import {
+	ActionFunction,
 	HeadersFunction,
 	LoaderFunction,
-	useFetcher,
+	Form,
+	Outlet,
 	useLoaderData,
 	useSearchParams,
+	useSubmit,
 	useTransition,
 	json,
 } from 'remix';
 import invariant from 'tiny-invariant';
+import { Button } from '~/components/button';
 import { CategoryFilter } from '~/components/category-filter';
 import { PaginationButton } from '~/components/pagination-button';
-import { ProductCard } from '~/components/product-card';
-import { getStoreInventory, StoreInventory } from '~/data';
+import { getStoreSummary, GetStoreSummary } from '~/data';
 
 function formatTime(date: string) {
 	const parsed = parseISO(date);
@@ -24,60 +25,49 @@ function formatTime(date: string) {
 
 export const headers: HeadersFunction = ({ loaderHeaders }) => {
 	return {
-		'Cache-Control': loaderHeaders.get('Cache-Control') || 'public, max-age=10',
+		// 'Cache-Control': loaderHeaders.get('Cache-Control') || 'public, max-age=10',
 	};
 };
 
-export const loader: LoaderFunction = async ({ params, request, ...rest }) => {
+export const loader: LoaderFunction = async ({ params, request }) => {
 	invariant(params.atvrId, 'Missing atvr id');
 	const searchParams = new URL(request.url).searchParams;
 
-	const page = parseInt(searchParams.get('page') || '0', 10);
-	const take = parseInt(searchParams.get('take') || '25', 10);
-	const skip = page * take;
-
 	const productCategoryId = searchParams.get('category') ?? undefined;
 	const tasteProfileId = searchParams.get('profile') ?? undefined;
+	const query = searchParams.get('query') ?? undefined;
 
-	const data = await getStoreInventory(params.atvrId, {
-		take,
-		skip,
+	const data = await getStoreSummary(params.atvrId, {
 		productCategoryId,
 		tasteProfileId,
+		query,
 	});
 
 	return json(data, {
 		headers: {
-			'Cache-Control': `public, max-age=10, s-maxage=1200, stale-while-revalidate=2678400`,
+			// 'Cache-Control': `public, max-age=10, s-maxage=1200, stale-while-revalidate=2678400`,
 		},
 	});
 };
 
 export default function AtvrSlug() {
-	const loaderData = useLoaderData<StoreInventory>();
+	const data = useLoaderData<GetStoreSummary>();
 	const transition = useTransition();
-	const syncFetcher = useFetcher<StoreInventory>();
+	const syncSubmit = useSubmit();
 	const [searchParams, setSearchParams] = useSearchParams();
-
-	const data = syncFetcher.data ? syncFetcher.data : loaderData;
 
 	const take = parseInt(searchParams.get('take') || '25', 10);
 	const page = parseInt(searchParams.get('page') || '0', 10);
 	const totalPages = Math.floor(data.totalItems / take);
+	const searchQuery = searchParams.get('query');
 
 	const isLoading = transition.state === 'loading';
 
-	useEffect(() => {
-		if (syncFetcher.state === 'idle' && syncFetcher.type === 'done') {
-			setSearchParams({});
-		}
-	}, [syncFetcher, data.store.atvrId]);
-
 	const handleSyncClick = () => {
-		syncFetcher.submit(
-			{ atvrId: data.store.atvrId },
-			{ method: 'post', action: `/store/${data.store.atvrId}/sync` },
-		);
+		syncSubmit(null, {
+			method: 'post',
+			action: `/store/${data.store.atvrId}/sync`,
+		});
 	};
 
 	const handleNextClick = () => {
@@ -106,32 +96,32 @@ export default function AtvrSlug() {
 		});
 	};
 
-	const lastUpdateAt = (data?.store?.inventory[0]?.createdAt ||
-		'') as unknown as string;
+	const lastUpdateAt = data.lastSync as unknown as string;
 
 	return (
 		<div>
-			<div className="flex flex-col md:flex-row justify-between items-stretch md:items-start">
-				<h2>
+			<div className="flex flex-col md:flex-row justify-between items-stretch md:items-start md:mb-4">
+				<h2 className="mb-4 md:mb-0">
 					{`${data.store.name} (${data.store.atvrId})`}
 					<small className="text-xs block">
 						(page {page + 1} of {totalPages + 1})
 					</small>
 				</h2>
-				<div className="flex-1 flex justify-between">
+				<div className="flex-1 grid grid-cols-2 md:flex justify-between">
 					<div>
-						<button
+						<Button
 							onClick={handleSyncClick}
+							color="success"
+							className="mr-auto mb-auto md:ml-4 md:first:mr-2"
 							disabled={
-								syncFetcher.state === 'loading' ||
-								syncFetcher.state === 'submitting'
+								transition.state === 'submitting' ||
+								transition.state === 'loading'
 							}
-							className="bg-green-800 text-white text-sm inline-block px-4 py-2 md:first:mr-2 rounded-sm shadow-md hover:shadow-lg hover:opacity-90 disabled:bg-green-300 disabled:text-gray-600 disabled:shadow-none disabled:cursor-default mr-auto mb-auto md:ml-4"
 						>
 							Sync now
-						</button>
+						</Button>
 					</div>
-					<div>
+					<div className="flex justify-end md:ml-auto md:mr-4">
 						<PaginationButton
 							onClick={handlePrevClick}
 							disabled={page === 0 || isLoading}
@@ -143,6 +133,17 @@ export default function AtvrSlug() {
 							disabled={page === totalPages || isLoading}
 							label="Next"
 						/>
+					</div>
+					<div className="col-span-2 mt-3 my-3 md:my-0">
+						<Form method="get" action="search" className="flex">
+							<input
+								name="query"
+								className="py-2 px-4 flex-1"
+								placeholder="Search"
+								defaultValue={searchQuery ?? ''}
+							/>
+							<Button type="submit">Submit</Button>
+						</Form>
 					</div>
 				</div>
 			</div>
@@ -158,9 +159,7 @@ export default function AtvrSlug() {
 				<CategoryFilter {...data.categories} />
 			</div>
 			<div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-6">
-				{data.store.inventory.map((item) => (
-					<ProductCard key={item.id} {...item} />
-				))}
+				<Outlet />
 			</div>
 		</div>
 	);

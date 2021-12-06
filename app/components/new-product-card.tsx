@@ -2,7 +2,7 @@ import format from 'date-fns/format';
 import parseISO from 'date-fns/parseISO';
 import { useState } from 'react';
 import { useFetcher } from 'remix';
-import type { NewProductsResponse } from '~/data';
+import type { GetNewProductsItem } from '~/data';
 import { applyTransformations } from '~/utils/cloudinary';
 import { Spinner } from './spinner';
 
@@ -15,10 +15,7 @@ function TableRow({ label, value }: { label: string; value: string | number }) {
 	);
 }
 
-function Table({
-	createdAt,
-	...product
-}: NewProductsResponse['products'][number]) {
+function Table({ createdAt, ...product }: GetNewProductsItem) {
 	return (
 		<table className="text-left w-full mt-auto">
 			<tbody>
@@ -33,9 +30,7 @@ function Table({
 	);
 }
 
-export function NewProductCard(
-	product: NewProductsResponse['products'][number],
-) {
+export function NewProductCard(product: GetNewProductsItem) {
 	const [collapsed, setCollapsed] = useState(true);
 
 	const fetcher = useFetcher();

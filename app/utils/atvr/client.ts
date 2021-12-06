@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { createFuzzySearch } from '../fuzzy';
 import {
 	AtvrStore,
@@ -9,17 +8,32 @@ import {
 } from './types';
 import beerTastes from './beer-tastes.json';
 
-const client = axios.create({
-	baseURL:
-		'https://www.vinbudin.is/addons/origo/module/ajaxwebservices/search.asmx',
-	headers: {
-		'Content-Type': 'application/json',
+interface Options {
+	params?: Record<string, string | number | undefined>;
+}
+
+const client = {
+	get: async <T>(path: string, { params = {} }: Options = {}) => {
+		const baseURL =
+			'https://www.vinbudin.is/addons/origo/module/ajaxwebservices/search.asmx';
+
+		const url = new URL(`${baseURL}/${path}`);
+		for (const [key, value] of Object.entries(params)) {
+			if (typeof value !== 'undefined') {
+				url.searchParams.set(key, value.toString());
+			}
+		}
+
+		const response = await fetch(url.href, {
+			headers: {
+				'Content-Type': 'application/json',
+			},
+		});
+
+		const data = await response.json();
+		return { data: JSON.parse(data.d) as T };
 	},
-	transformResponse: (response) => {
-		const json = JSON.parse(response);
-		return JSON.parse(json.d);
-	},
-});
+};
 
 let cachedProducers: string[] = [];
 

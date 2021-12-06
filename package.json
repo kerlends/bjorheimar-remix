@@ -14,7 +14,7 @@
     "dev:server": "remix dev",
     "dev:css": "postcss styles --base styles --dir app/styles -w",
     "postinstall": "remix setup node",
-    "start": "remix-serve build",
+    "start": "remix-serve api/build",
     "generate": "prisma generate"
   },
   "prettier": {

@@ -9,10 +9,9 @@ import {
 	useTransition,
 	json,
 } from 'remix';
-import invariant from 'tiny-invariant';
 import { PaginationButton } from '~/components/pagination-button';
 import { NewProductCard } from '~/components/new-product-card';
-import { getNewProducts, NewProductsResponse } from '~/data';
+import { getNewProducts, GetNewProducts } from '~/data';
 
 function formatTime(date: string) {
 	const parsed = parseISO(date);
@@ -46,13 +45,13 @@ export const loader: LoaderFunction = async ({ params, request, ...rest }) => {
 
 	return json(data, {
 		headers: {
-			'Cache-Control': `public, max-age=10, s-maxage=1200, stale-while-revalidate=2678400`,
+			// 'Cache-Control': `public, max-age=10, s-maxage=1200, stale-while-revalidate=2678400`,
 		},
 	});
 };
 
 export default function AtvrSlug() {
-	const data = useLoaderData<NewProductsResponse>();
+	const data = useLoaderData<GetNewProducts>();
 	const transition = useTransition();
 	const [searchParams, setSearchParams] = useSearchParams();
 

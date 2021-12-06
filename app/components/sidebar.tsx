@@ -1,9 +1,9 @@
 import { Link, useParams } from 'remix';
 import clsx from 'clsx';
-import type { LoaderData as Stores } from '~/root';
+import type { GetAllStores } from '~/data';
 
 interface SidebarProps {
-	stores: Stores;
+	stores: GetAllStores;
 }
 
 export function Sidebar({ stores }: SidebarProps) {
