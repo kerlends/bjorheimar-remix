@@ -148,7 +148,7 @@ function Layout({ children }: { children: React.ReactNode }) {
 	return (
 		<div className="flex">
 			<Sidebar stores={data} />
-			<main className="flex-1 relative">
+			<main className="flex-1 relative ml-20 md:ml-60">
 				{isLoading && (
 					<Overlay open>
 						<Spinner />

@@ -10,7 +10,7 @@ export function Sidebar({ stores }: SidebarProps) {
 	const params = useParams();
 
 	return (
-		<aside className="overflow-y-auto max-h-screen py-4 pr-2 md:pr-0">
+		<aside className="overflow-y-auto max-h-screen py-4 pr-2 md:pr-0 fixed w-20 md:w-60">
 			<ul>
 				<li>
 					<Link
