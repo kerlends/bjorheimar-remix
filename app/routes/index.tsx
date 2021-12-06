@@ -87,6 +87,22 @@ export default function AtvrSlug() {
 		});
 	};
 
+	const paginationButtons = (
+		<>
+			<PaginationButton
+				onClick={handlePrevClick}
+				disabled={page === 0 || isLoading}
+				label="Prev"
+			/>
+			<PaginationButton
+				onClick={handleNextClick}
+				className="bg-gray-800 text-white"
+				disabled={page === totalPages || isLoading}
+				label="Next"
+			/>
+		</>
+	);
+
 	return (
 		<div className="overflow-y-auto max-h-screen pt-2 pr-2 md:p-4 relative">
 			<div className="flex flex-col md:flex-row justify-between items-stretch md:items-start">
@@ -97,25 +113,16 @@ export default function AtvrSlug() {
 					</small>
 				</h2>
 				<div className="flex-1 flex justify-between">
-					<div>
-						<PaginationButton
-							onClick={handlePrevClick}
-							disabled={page === 0 || isLoading}
-							label="Prev"
-						/>
-						<PaginationButton
-							onClick={handleNextClick}
-							className="bg-gray-800 text-white"
-							disabled={page === totalPages || isLoading}
-							label="Next"
-						/>
-					</div>
+					<div>{paginationButtons}</div>
 				</div>
 			</div>
 			<div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-6">
 				{data.products.map((product) => (
 					<NewProductCard key={product.id} {...product} />
 				))}
+			</div>
+			<div className="flex-1 flex justify-center mt-4 mb-2">
+				{paginationButtons}
 			</div>
 		</div>
 	);

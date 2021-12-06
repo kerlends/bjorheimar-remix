@@ -98,6 +98,22 @@ export default function AtvrSlug() {
 
 	const lastUpdateAt = data.lastSync as unknown as string;
 
+	const paginationButtons = (
+		<>
+			<PaginationButton
+				onClick={handlePrevClick}
+				disabled={page === 0 || isLoading}
+				label="Prev"
+			/>
+			<PaginationButton
+				onClick={handleNextClick}
+				className="bg-gray-800 text-white"
+				disabled={page === totalPages || isLoading}
+				label="Next"
+			/>
+		</>
+	);
+
 	return (
 		<div>
 			<div className="flex flex-col md:flex-row justify-between items-stretch md:items-start md:mb-4">
@@ -122,17 +138,7 @@ export default function AtvrSlug() {
 						</Button>
 					</div>
 					<div className="flex justify-end md:ml-auto md:mr-4">
-						<PaginationButton
-							onClick={handlePrevClick}
-							disabled={page === 0 || isLoading}
-							label="Prev"
-						/>
-						<PaginationButton
-							onClick={handleNextClick}
-							className="bg-gray-800 text-white"
-							disabled={page === totalPages || isLoading}
-							label="Next"
-						/>
+						{paginationButtons}
 					</div>
 					<div className="col-span-2 mt-3 my-3 md:my-0">
 						<Form method="get" action="search" className="flex">
@@ -160,6 +166,9 @@ export default function AtvrSlug() {
 			</div>
 			<div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-6">
 				<Outlet />
+			</div>
+			<div className="flex-1 flex justify-center mt-4 mb-2">
+				{paginationButtons}
 			</div>
 		</div>
 	);
