@@ -14,7 +14,7 @@
     "dev": "run-p dev:*",
     "dev:server": "remix dev",
     "dev:css": "postcss styles --base styles --dir app/styles -w",
-    "postinstall": "remix setup node",
+    "postinstall": "remix setup vercel",
     "start": "remix-serve api/build",
     "generate": "prisma generate"
   },
