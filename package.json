@@ -16,7 +16,8 @@
     "dev:css": "postcss styles --base styles --dir app/styles -w",
     "postinstall": "remix setup vercel",
     "start": "remix-serve api/build",
-    "generate": "prisma generate"
+    "generate": "prisma generate",
+    "format": "prettier \"./app/**/*.{ts,tsx,css}\" --write"
   },
   "prettier": {
     "arrowParens": "always",
