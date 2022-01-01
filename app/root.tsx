@@ -18,6 +18,8 @@ import { Spinner } from '~/components/spinner';
 
 import tailwindStyles from './styles/app.css';
 import { GetAllStores, getAllStores } from './data';
+import { authenticate, getAuthConfig, getToken } from './utils/auth.server';
+import { commitSession, getSession } from './sessions/auth';
 
 export const links: LinksFunction = () => {
 	return [
@@ -35,17 +37,32 @@ export const links: LinksFunction = () => {
 	];
 };
 
+async function getLoaderData() {
+	const authConfig = getAuthConfig();
+	return {
+		stores: await getAllStores(),
+		authConfig,
+	};
+}
+
+type Data = AwaitedReturnType<typeof getLoaderData>;
+
 const dayInSeconds = 60 * 60 * 24;
-export const loader: LoaderFunction = async () => {
-	const stores = await getAllStores();
-	return json(stores, {
+export const loader: LoaderFunction = async ({ request }) => {
+	const data = await getLoaderData();
+	const cookieHeader = request.headers.get('Cookie');
+	console.log('cookie header', cookieHeader);
+	// const session = await getSession(request.headers.get('Cookie'));
+	// console.log('[root:loader] session', session);
+	// console.log('[root:loader] session.data', session?.data);
+	return json(data, {
 		headers: {
 			'Cache-Control': `public, max-age=${dayInSeconds}, s-maxage=${dayInSeconds}, stale-while-revalidate=2678400`,
 		},
 	});
 };
 
-export const unstable_shouldReload = () => false;
+// export const unstable_shouldReload = () => false;
 
 export default function App() {
 	return (
@@ -141,13 +158,13 @@ function Document({
 }
 
 function Layout({ children }: { children: React.ReactNode }) {
-	const data = useLoaderData<GetAllStores>();
+	const data = useLoaderData<Data>();
 	const transition = useTransition();
 	const isLoading = transition.state === 'loading';
 
 	return (
 		<div className="flex">
-			<Sidebar stores={data} />
+			<Sidebar stores={data.stores} />
 			<main className="flex-1 relative ml-20 md:ml-60">
 				{isLoading && (
 					<Overlay open>

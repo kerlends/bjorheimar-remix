@@ -1,6 +1,7 @@
 import { Link, useParams } from 'remix';
 import clsx from 'clsx';
 import type { GetAllStores } from '~/data';
+import {LoginButton} from './login-button';
 
 interface SidebarProps {
 	stores: GetAllStores;
@@ -11,6 +12,7 @@ export function Sidebar({ stores }: SidebarProps) {
 
 	return (
 		<aside className="overflow-y-auto max-h-screen py-4 pr-2 md:pr-0 fixed w-20 md:w-60">
+			<LoginButton />
 			<ul>
 				<li>
 					<Link

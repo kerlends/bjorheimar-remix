@@ -12,7 +12,7 @@
     "build:server": "remix build",
     "build:css": "postcss styles --base styles --dir app/styles --env production",
     "dev": "run-p dev:*",
-    "dev:server": "remix dev",
+    "dev:server": "node -r dotenv/config node_modules/.bin/remix dev",
     "dev:css": "postcss styles --base styles --dir app/styles -w",
     "postinstall": "remix setup vercel",
     "start": "remix-serve api/build",
@@ -29,11 +29,15 @@
     "semi": true
   },
   "dependencies": {
+    "@auth0/auth0-react": "^1.8.0",
     "@prisma/client": "^3.7.0",
     "@remix-run/react": "^1.1.1",
     "@remix-run/serve": "^1.1.1",
     "@remix-run/vercel": "^1.1.1",
+    "@types/auth0": "^2.34.9",
+    "@types/uuid": "^8.3.3",
     "@vercel/node": "^1.12.1",
+    "auth0": "^2.37.0",
     "cheerio": "^1.0.0-rc.10",
     "cloudinary": "^1.27.1",
     "clsx": "^1.1.1",
@@ -43,7 +47,8 @@
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "remix": "^1.1.1",
-    "tiny-invariant": "^1.2.0"
+    "tiny-invariant": "^1.2.0",
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
     "@remix-run/dev": "^1.1.1",
