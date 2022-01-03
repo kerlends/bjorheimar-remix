@@ -13,32 +13,36 @@ declare global {
 if (process.env.NODE_ENV === 'production') {
 	db = new PrismaClient();
 	db.$connect();
+	addLogging(db);
 } else {
 	if (!global.__db) {
 		global.__db = new PrismaClient();
 		global.__db.$connect();
+		addLogging(global.__db);
 	}
 	db = global.__db;
 }
 
-const enableQueryLogging = ['true', '1'].includes(
-	process.env.ENABLE_QUERY_LOGGING || '',
-);
+function addLogging(db: PrismaClient) {
+	const enableQueryLogging = ['true', '1'].includes(
+		process.env.ENABLE_QUERY_LOGGING || '',
+	);
 
-if (enableQueryLogging) {
-	db.$use(async (params, next) => {
-		const before = Date.now();
+	if (enableQueryLogging) {
+		db.$use(async (params, next) => {
+			const before = Date.now();
 
-		const result = await next(params);
+			const result = await next(params);
 
-		const after = Date.now();
+			const after = Date.now();
 
-		console.log(
-			`Query ${params.model}.${params.action} took ${after - before}ms`,
-		);
+			console.log(
+				`Query ${params.model}.${params.action} took ${after - before}ms`,
+			);
 
-		return result;
-	});
+			return result;
+		});
+	}
 }
 
 export { db };

@@ -98,6 +98,8 @@ export async function getDoSearch({
 		}
 	});
 
+	console.log('Got %s items when querying store %s', data.data.length, shop)
+
 	return {
 		...data,
 		data: data.data.map((entry) => {

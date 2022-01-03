@@ -26,19 +26,14 @@ export default async function syncManufacturers(config: PrismaConfig) {
 		})
 		.map((brewer) => fuzzySet.get(brewer) || brewer) as string[];
 
-	const transactions = manufacturers
-		.filter((mf) => !!mf)
-		.map((mf) => {
-			return config.prisma.manufacturer.upsert({
-				where: {
-					name: mf,
-				},
-				create: {
-					name: mf,
-				},
-				update: {},
-			});
+	if (manufacturers.length > 0) {
+		console.log('Adding %s new brewers', manufacturers.length);
+		await config.prisma.manufacturer.createMany({
+			data: manufacturers.map((brewer) => ({
+				name: brewer,
+			})),
 		});
-
-	await config.prisma.$transaction(transactions);
+	} else {
+		console.log('No new brewers found');
+	}
 }

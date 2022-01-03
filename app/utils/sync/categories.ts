@@ -60,5 +60,5 @@ export default async function syncCategories(config: PrismaConfig) {
 		});
 	});
 
-	await config.prisma.$transaction(transactions);
+	await Promise.all(transactions);
 }
