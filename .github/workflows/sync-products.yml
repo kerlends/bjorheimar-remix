@@ -2,7 +2,7 @@ name: Sync atvr inventory
 
 on:
   schedule:
-    - cron: "10 12 * * 1-6"
+    - cron: "2 12 * * 1-6"
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -17,4 +17,4 @@ jobs:
       - name: Install job deps
         run: cd jobs && npm install
       - name: Run script
-        run: node ./jobs/sync-stores.js
+        run: node ./jobs/sync-products.js

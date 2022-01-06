@@ -7,8 +7,18 @@ datasource db {
 }
 
 generator client {
-  provider  = "prisma-client-js"
-  previewFeatures = ["dataProxy"]
+  provider = "prisma-client-js"
+  //previewFeatures = ["dataProxy"]
+}
+
+model User {
+  id        String @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String @unique
+  roles     String[]
+
+  lastLogin DateTime @default(now())
 }
 
 model Store {
@@ -59,17 +69,17 @@ model Product {
 }
 
 model ProductInventory {
-  id        String   @id @default(uuid())
-  product   Product  @relation(fields: [productId], references: [id])
-  store     Store    @relation(fields: [storeId], references: [id])
-  price     Float    @default(0.0)
-  quantity  Int
-  available         Boolean            @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  latest    Boolean  @default(false)
-  productId String
-  storeId   String
+  id            String   @id @default(uuid())
+  product       Product  @relation(fields: [productId], references: [id])
+  store         Store    @relation(fields: [storeId], references: [id])
+  price         Float    @default(0.0)
+  quantity      Int
+  available     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  latest        Boolean  @default(false)
+  productId     String
+  storeId       String
   atvrProductId String?
 }
 
@@ -99,7 +109,7 @@ model Manufacturer {
 
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 enum ContainerType {

@@ -3,7 +3,7 @@ import invariant from 'tiny-invariant';
 import cheerio from 'cheerio';
 import { db } from '~/utils/db.server';
 
-export const action: ActionFunction = async ({ params }) => {
+export const action: ActionFunction = async ({ params, request }) => {
 	invariant(!!params.productId);
 	const paddedId = params.productId.padStart(5, '0');
 

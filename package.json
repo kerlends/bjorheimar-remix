@@ -12,7 +12,7 @@
     "build:server": "remix build",
     "build:css": "postcss styles --base styles --dir app/styles --env production",
     "dev": "run-p dev:*",
-    "dev:server": "remix dev",
+    "dev:server": "node -r dotenv/config node_modules/.bin/remix dev",
     "dev:css": "postcss styles --base styles --dir app/styles -w",
     "postinstall": "remix setup vercel",
     "start": "remix-serve api/build",
@@ -40,9 +40,13 @@
     "date-fns": "^2.26.0",
     "dotenv": "^10.0.0",
     "fuzzyset": "^1.0.6",
+    "jose": "^4.3.7",
+    "jwt-decode": "^3.1.2",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "remix": "^1.1.1",
+    "remix-auth": "^3.1.0",
+    "remix-auth-auth0": "^1.1.0",
     "tiny-invariant": "^1.2.0"
   },
   "devDependencies": {

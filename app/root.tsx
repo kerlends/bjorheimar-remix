@@ -17,7 +17,8 @@ import { Overlay } from '~/components/overlay';
 import { Spinner } from '~/components/spinner';
 
 import tailwindStyles from './styles/app.css';
-import { GetAllStores, getAllStores } from './data';
+import { getAllStores } from './data';
+import { authenticator } from './services/auth.server';
 
 export const links: LinksFunction = () => {
 	return [
@@ -35,10 +36,19 @@ export const links: LinksFunction = () => {
 	];
 };
 
-const dayInSeconds = 60 * 60 * 24;
-export const loader: LoaderFunction = async () => {
+async function getLoaderData(request: Request) {
 	const stores = await getAllStores();
-	return json(stores, {
+	const user = await authenticator.isAuthenticated(request);
+	return { stores, user, isAdmin: user?.roles.includes('admin') ?? false };
+}
+
+type Data = AwaitedReturnType<typeof getLoaderData>;
+
+const dayInSeconds = 60 * 60 * 24;
+export const loader: LoaderFunction = async ({ request }) => {
+	const data = await getLoaderData(request);
+
+	return json(data, {
 		headers: {
 			'Cache-Control': `public, max-age=${dayInSeconds}, s-maxage=${dayInSeconds}, stale-while-revalidate=2678400`,
 		},
@@ -48,10 +58,11 @@ export const loader: LoaderFunction = async () => {
 export const unstable_shouldReload = () => false;
 
 export default function App() {
+	const { isAdmin } = useLoaderData<Data>();
 	return (
 		<Document title="Bjorheimar">
 			<Layout>
-				<Outlet />
+				<Outlet context={{ isAdmin }} />
 			</Layout>
 		</Document>
 	);
@@ -141,13 +152,13 @@ function Document({
 }
 
 function Layout({ children }: { children: React.ReactNode }) {
-	const data = useLoaderData<GetAllStores>();
+	const data = useLoaderData<Data>();
 	const transition = useTransition();
 	const isLoading = transition.state === 'loading';
 
 	return (
 		<div className="flex">
-			<Sidebar stores={data} />
+			<Sidebar stores={data.stores} user={data.user} />
 			<main className="flex-1 relative ml-20 md:ml-60">
 				{isLoading && (
 					<Overlay open>

@@ -1,16 +1,28 @@
-import { Link, useParams } from 'remix';
+import { Form, Link, useParams } from 'remix';
 import clsx from 'clsx';
 import type { GetAllStores } from '~/data';
+import { Button } from './button';
+import { User } from '@prisma/client';
 
 interface SidebarProps {
 	stores: GetAllStores;
+	user: User | null;
 }
 
-export function Sidebar({ stores }: SidebarProps) {
+export function Sidebar({ stores, user }: SidebarProps) {
 	const params = useParams();
 
 	return (
 		<aside className="overflow-y-auto max-h-screen py-4 pr-2 md:pr-0 fixed w-20 md:w-60">
+			<div className="ml-2 mb-2">
+				{user ? null : (
+					<Form method="post" action="/auth/login" className="md:pr-2">
+						<Button type="submit" color="success" className="px-2 md:w-full">
+							Login
+						</Button>
+					</Form>
+				)}
+			</div>
 			<ul>
 				<li>
 					<Link

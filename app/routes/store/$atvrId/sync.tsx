@@ -1,12 +1,23 @@
 import { ActionFunction, useCatch } from 'remix';
 import { redirect } from 'remix';
 import invariant from 'tiny-invariant';
+import { authenticator, verifyMachineToken } from '~/services/auth.server';
 import { db } from '~/utils/db.server';
 import { syncInventory } from '~/utils/sync';
 
 export const action: ActionFunction = async ({ params, request }) => {
 	invariant(typeof params.atvrId === 'string', 'Missing parameter: atvrId');
-	await syncInventory({ prisma: db }, params.atvrId);
+	const user = await authenticator.isAuthenticated(request);
+	if (user?.roles.includes('admin')) {
+		await syncInventory({ prisma: db }, params.atvrId);
+	} else if (request.headers.has('authorization')) {
+		const token =
+			request.headers.get('authorization')?.replace('Bearer ', '') ?? '';
+
+		if (await verifyMachineToken(token)) {
+			await syncInventory({ prisma: db }, params.atvrId);
+		}
+	}
 	return redirect(`/store/${params.atvrId}`);
 };
 

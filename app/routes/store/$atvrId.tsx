@@ -1,3 +1,4 @@
+import clsx from 'clsx';
 import format from 'date-fns/format';
 import parseISO from 'date-fns/parseISO';
 import {
@@ -11,6 +12,7 @@ import {
 	useSubmit,
 	useTransition,
 	json,
+	useOutletContext,
 } from 'remix';
 import invariant from 'tiny-invariant';
 import { Button } from '~/components/button';
@@ -55,6 +57,8 @@ export default function AtvrSlug() {
 	const transition = useTransition();
 	const syncSubmit = useSubmit();
 	const [searchParams, setSearchParams] = useSearchParams();
+
+	const { isAdmin } = useOutletContext<{ isAdmin: boolean }>();
 
 	const take = parseInt(searchParams.get('take') || '25', 10);
 	const page = parseInt(searchParams.get('page') || '0', 10);
@@ -123,21 +127,29 @@ export default function AtvrSlug() {
 						(page {page + 1} of {totalPages + 1})
 					</small>
 				</h2>
-				<div className="flex-1 grid grid-cols-2 md:flex justify-between">
-					<div>
-						<Button
-							onClick={handleSyncClick}
-							color="success"
-							className="mr-auto mb-auto md:ml-4 md:first:mr-2"
-							disabled={
-								transition.state === 'submitting' ||
-								transition.state === 'loading'
-							}
-						>
-							Sync now
-						</Button>
-					</div>
-					<div className="flex justify-end md:ml-auto md:mr-4">
+				<div
+					className={clsx('flex-1 grid grid-cols-2 md:flex justify-between')}
+				>
+					{isAdmin && (
+						<div>
+							<Button
+								onClick={handleSyncClick}
+								color="success"
+								className="mr-auto mb-auto md:ml-4 md:first:mr-2"
+								disabled={
+									transition.state === 'submitting' ||
+									transition.state === 'loading'
+								}
+							>
+								Sync now
+							</Button>
+						</div>
+					)}
+					<div
+						className={clsx('flex justify-end md:ml-auto md:mr-4', {
+							'col-span-full': !isAdmin,
+						})}
+					>
 						{paginationButtons}
 					</div>
 					<div className="col-span-2 mt-3 my-3 md:my-0">
