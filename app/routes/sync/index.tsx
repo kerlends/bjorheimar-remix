@@ -1,4 +1,4 @@
-import { json, LoaderFunction, redirect } from 'remix';
+import { LoaderFunction, redirect } from 'remix';
 import { authenticator, verifyMachineToken } from '~/services/auth.server';
 
 import { db } from '~/utils/db.server';
@@ -6,7 +6,7 @@ import { db } from '~/utils/db.server';
 import manufacturerSeed from '~/utils/sync/brewers';
 import categorySeed from '~/utils/sync/categories';
 
-export const loader: LoaderFunction = async ({ request }) => {
+export const action: LoaderFunction = async ({ request }) => {
 	const user = await authenticator.isAuthenticated(request);
 	if (user?.roles.includes('admin')) {
 		await manufacturerSeed({ prisma: db });

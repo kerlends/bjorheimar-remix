@@ -4,7 +4,7 @@ const getToken = require('./token');
 async function run() {
 	const token = await getToken();
 	try {
-		await axios.get(
+		await axios.post(
 			'https://bjor.konrade.tech/sync',
 			{},
 			{
