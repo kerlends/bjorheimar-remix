@@ -1,4 +1,4 @@
-name: Sync atvr inventory
+name: Sync atvr products
 
 on:
   schedule:
