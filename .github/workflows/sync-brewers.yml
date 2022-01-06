@@ -1,9 +1,6 @@
 name: Sync atvr brewers
 
 on:
-  push:
-    branches:
-      - main
   schedule:
     - cron: "0 12 * * 1-6"
 
