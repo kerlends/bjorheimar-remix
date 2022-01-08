@@ -293,7 +293,13 @@ export async function getStoreInventory(
 				where: {
 					latest: true,
 					// quantity: { gt: 0 },
-					product: { productCategoryId, tasteProfileId },
+					product: {
+						productCategoryId,
+						tasteProfileId,
+						containerType: {
+							in: ['CAN', 'BOTTLE', 'GIFTBOX', 'BOX'],
+						},
+					},
 				},
 				orderBy: { product: { createdAt: 'desc' } },
 				include: {
