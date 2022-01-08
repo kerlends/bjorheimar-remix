@@ -352,6 +352,9 @@ export async function getNewProducts({
 				createdAt: {
 					gte: subDays(new Date(), 14),
 				},
+				containerType: {
+					in: ['CAN', 'BOTTLE', 'GIFTBOX', 'BOX'],
+				},
 			},
 		}),
 
@@ -364,6 +367,9 @@ export async function getNewProducts({
 			where: {
 				createdAt: {
 					gte: subDays(new Date(), 60),
+				},
+				containerType: {
+					in: ['CAN', 'BOTTLE', 'GIFTBOX', 'BOX'],
 				},
 			},
 			include: {
