@@ -15,7 +15,17 @@ export function Sidebar({ stores, user }: SidebarProps) {
 	return (
 		<aside className="overflow-y-auto max-h-screen py-4 pr-2 md:pr-0 fixed w-20 md:w-60">
 			<div className="ml-2 mb-2">
-				{user ? null : (
+				{user ? (
+					<Link
+						to="/profile"
+						className={clsx(
+							'font-semibold text-xl inline-block px-3 py-2 rounded-lg shadow-sm bg-gray-200 mb-1',
+							'hover:bg-gray-100 hover:opacity:90',
+						)}
+					>
+						⚙️
+					</Link>
+				) : (
 					<Form method="post" action="/auth/login" className="md:pr-2">
 						<Button type="submit" color="success" className="px-2 md:w-full">
 							Login

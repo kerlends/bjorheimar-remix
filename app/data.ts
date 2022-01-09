@@ -4,11 +4,9 @@ import invariant from 'tiny-invariant';
 import { db } from '~/utils/db.server';
 
 function parseNumericQuery(query: string): Prisma.FloatFilter | null {
-	console.log('Parsing query:', query);
 	const numericMatch = query.match(
 		/(?<quantifier>\>|\<|=|\>=|\<=)?(?<value>\d+(\.?\d+)?)/,
 	);
-	console.log('Query parsed with result:', numericMatch);
 
 	if (numericMatch?.groups?.value) {
 		const { quantifier, value } = numericMatch.groups;
@@ -226,11 +224,17 @@ export interface GetStoreSummaryOptions {
 	productCategoryId?: string;
 	tasteProfileId?: string;
 	query?: string;
+	showUnavailableProducts?: boolean;
 }
 
 export async function getStoreSummary(
 	atvrId: string,
-	{ productCategoryId, tasteProfileId, query }: GetStoreSummaryOptions,
+	{
+		productCategoryId,
+		tasteProfileId,
+		showUnavailableProducts,
+		query,
+	}: GetStoreSummaryOptions,
 ) {
 	const [totalItems, store, categories, lastInventoryEntry] = await Promise.all(
 		[
@@ -243,6 +247,7 @@ export async function getStoreSummary(
 						...getProductFilter(query),
 					},
 					latest: true,
+					quantity: showUnavailableProducts ? undefined : { gt: 0 },
 				},
 			}),
 			db.store.findUnique({
@@ -278,11 +283,18 @@ export interface GetStoreInventoryOptions {
 	skip: number;
 	productCategoryId?: string;
 	tasteProfileId?: string;
+	showUnavailableProducts?: boolean;
 }
 
 export async function getStoreInventory(
 	atvrId: string,
-	{ take, skip, productCategoryId, tasteProfileId }: GetStoreInventoryOptions,
+	{
+		take,
+		skip,
+		productCategoryId,
+		tasteProfileId,
+		showUnavailableProducts,
+	}: GetStoreInventoryOptions,
 ) {
 	const store = await db.store.findUnique({
 		where: { atvrId },
@@ -292,7 +304,7 @@ export async function getStoreInventory(
 				skip,
 				where: {
 					latest: true,
-					// quantity: { gt: 0 },
+					quantity: showUnavailableProducts ? undefined : { gt: 0 },
 					product: {
 						productCategoryId,
 						tasteProfileId,
@@ -340,11 +352,13 @@ export type GetStoreInventoryItem = GetStoreInventory['inventory'][number];
 interface GetNewProductsOptions {
 	take?: number;
 	skip?: number;
+	showUnavailableProducts?: boolean;
 }
 
 export async function getNewProducts({
 	take = 40,
 	skip = 0,
+	showUnavailableProducts,
 }: GetNewProductsOptions = {}) {
 	const [totalItems, products] = await Promise.all([
 		db.product.count({
@@ -355,6 +369,13 @@ export async function getNewProducts({
 				containerType: {
 					in: ['CAN', 'BOTTLE', 'GIFTBOX', 'BOX'],
 				},
+				inventory: showUnavailableProducts
+					? undefined
+					: {
+							some: {
+								quantity: { gt: 0 },
+							},
+					  },
 			},
 		}),
 
@@ -371,6 +392,11 @@ export async function getNewProducts({
 				containerType: {
 					in: ['CAN', 'BOTTLE', 'GIFTBOX', 'BOX'],
 				},
+				inventory: showUnavailableProducts
+					? undefined
+					: {
+							some: { quantity: { gt: 0 } },
+					  },
 			},
 			include: {
 				tasteProfile: {

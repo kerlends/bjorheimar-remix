@@ -23,3 +23,11 @@
     @apply mb-1;
   }
 }
+
+.switch-input:checked ~ .dot {
+  transform: translateX(100%);
+}
+
+.switch-input:checked ~ .line {
+  background-color: #48bb78;
+}

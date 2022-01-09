@@ -9,8 +9,10 @@ import {
 	useLoaderData,
 	json,
 	useTransition,
+	redirect,
+	Link,
 } from 'remix';
-import type { LoaderFunction, LinksFunction } from 'remix';
+import type { ActionFunction, LoaderFunction, LinksFunction } from 'remix';
 
 import { Sidebar } from '~/components/sidebar';
 import { Overlay } from '~/components/overlay';
@@ -30,7 +32,7 @@ export const links: LinksFunction = () => {
 		},
 		{
 			rel: 'stylesheet',
-			href: 'https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,700;1,400&display=swap',
+			href: 'https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap',
 		},
 		{ rel: 'stylesheet', href: tailwindStyles },
 	];
@@ -53,6 +55,12 @@ export const loader: LoaderFunction = async ({ request }) => {
 			'Cache-Control': `public, max-age=${dayInSeconds}, s-maxage=${dayInSeconds}, stale-while-revalidate=2678400`,
 		},
 	});
+};
+
+export const action: ActionFunction = async ({ request }) => {
+	const form = await request.formData();
+	console.log('form values', Array.from(form.entries()));
+	return redirect(request.url);
 };
 
 export const unstable_shouldReload = () => false;

@@ -19,6 +19,7 @@ import { Button } from '~/components/button';
 import { CategoryFilter } from '~/components/category-filter';
 import { PaginationButton } from '~/components/pagination-button';
 import { getStoreSummary, GetStoreSummary } from '~/data';
+import { authenticator } from '~/services/auth.server';
 
 function formatTime(date: string) {
 	const parsed = parseISO(date);
@@ -38,11 +39,13 @@ export const loader: LoaderFunction = async ({ params, request }) => {
 	const productCategoryId = searchParams.get('category') ?? undefined;
 	const tasteProfileId = searchParams.get('profile') ?? undefined;
 	const query = searchParams.get('query') ?? undefined;
+	const user = await authenticator.isAuthenticated(request);
 
 	const data = await getStoreSummary(params.atvrId, {
 		productCategoryId,
 		tasteProfileId,
 		query,
+		showUnavailableProducts: user?.profile?.showUnavailableProducts ?? false,
 	});
 
 	return json(data, {

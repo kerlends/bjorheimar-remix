@@ -1,15 +1,47 @@
 import type { User } from '@prisma/client';
 import jwtDecode from 'jwt-decode';
 import { Authenticator } from 'remix-auth';
-import { Auth0Strategy } from 'remix-auth-auth0';
+import { Auth0Profile, Auth0Strategy } from 'remix-auth-auth0';
 import { sessionStorage } from '~/services/session.server';
 import { db } from '~/utils/db.server';
 import { env } from '~/utils/env';
 import jose from 'jose';
 
+async function upsertUser(profile: Auth0Profile) {
+	const json = profile._json as any;
+	const roles = json['http://bjorheimar/claims/roles'];
+
+	// Get the user data from your DB or API using the tokens and profile
+	return await db.user.upsert({
+		include: {
+			profile: true,
+		},
+		where: {
+			email: profile.emails[0].value,
+		},
+		create: {
+			firstName: profile.name.givenName,
+			lastName: profile.name.familyName,
+			email: profile.emails[0].value,
+			roles: { set: roles },
+			profile: {
+				create: {
+					showUnavailableProducts: false,
+				},
+			},
+		},
+		update: {
+			lastLogin: new Date(),
+			roles: { set: roles },
+		},
+	});
+}
+
 // Create an instance of the authenticator, pass a generic with what
 // strategies will return and will store in the session
-export const authenticator = new Authenticator<User>(sessionStorage);
+export const authenticator = new Authenticator<
+	AwaitedReturnType<typeof upsertUser>
+>(sessionStorage);
 
 const auth0Strategy = new Auth0Strategy(
 	{
@@ -20,27 +52,7 @@ const auth0Strategy = new Auth0Strategy(
 		scope: 'openid profile email roles',
 	},
 	async ({ accessToken, refreshToken, extraParams, profile }) => {
-		const json = profile._json as any;
-		const roles = json['http://bjorheimar/claims/roles'];
-
-		console.log({ json, roles });
-
-		// Get the user data from your DB or API using the tokens and profile
-		return await db.user.upsert({
-			where: {
-				email: profile.emails[0].value,
-			},
-			create: {
-				firstName: profile.name.givenName,
-				lastName: profile.name.familyName,
-				email: profile.emails[0].value,
-				roles: { set: roles },
-			},
-			update: {
-				lastLogin: new Date(),
-				roles: { set: roles },
-			},
-		});
+		return upsertUser(profile);
 	},
 );
 

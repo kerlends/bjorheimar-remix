@@ -3,6 +3,7 @@ import { json } from 'remix';
 import invariant from 'tiny-invariant';
 import { ProductCard } from '~/components/product-card';
 import { getStoreInventory, GetStoreInventory } from '~/data';
+import { authenticator } from '~/services/auth.server';
 
 export const loader: LoaderFunction = async ({ params, request }) => {
 	invariant(params.atvrId, 'Missing atvr id');
@@ -14,12 +15,14 @@ export const loader: LoaderFunction = async ({ params, request }) => {
 
 	const productCategoryId = searchParams.get('category') ?? undefined;
 	const tasteProfileId = searchParams.get('profile') ?? undefined;
+	const user = await authenticator.isAuthenticated(request);
 
 	const data = await getStoreInventory(params.atvrId, {
 		take,
 		skip,
 		productCategoryId,
 		tasteProfileId,
+		showUnavailableProducts: user?.profile?.showUnavailableProducts ?? false,
 	});
 
 	return json(data, {
