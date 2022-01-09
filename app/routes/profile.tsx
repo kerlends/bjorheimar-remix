@@ -64,7 +64,7 @@ export default function ProfileRoute() {
 								name="showUnavailableProducts"
 								id="showUnavailableProducts"
 								label="Show unavailable products"
-								defaultChecked={data.showUnavailableProducts ?? false}
+								defaultChecked={data?.showUnavailableProducts ?? false}
 							/>
 						</div>
 						<div className="mt-4 flex justify-end">
